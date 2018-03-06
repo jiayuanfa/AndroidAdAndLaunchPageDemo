@@ -30,8 +30,6 @@ public class WebViewActivity extends BaseActivity {
     private Toolbar toolbar;
     private String from;
 
-
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 //        setTheme();

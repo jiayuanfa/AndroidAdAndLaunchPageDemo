@@ -21,8 +21,10 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 /**
  * Created by john on 2016/9/10.
+ * 网络类
  */
 public class RetrofitServiceInstance {
+
     private static RetrofitService instance = null;
     public static RetrofitService getInstance() {
 

@@ -36,15 +36,25 @@ public class AdPresenterImpl extends PBase<AdContract.View> {
     }
 
 
-    public void getLoginCheck() {//向服务器请求是否要播放广告
+    /**
+     * 向服务端请求是否要播放广告
+     */
+
+    public void getLoginCheck() {
+
+        //向服务器请求是否要播放广告
         mAdModel.getLoginCheck()
                 .subscribeOn(Schedulers.io())                            //发布者在后台线程中运行
                 .observeOn(AndroidSchedulers.mainThread())               //订阅者在Android主线程中运行
                 .subscribe(new RxSubscribe<LoginCheckBean>() {
+
                     @Override
                     protected void _onNext(LoginCheckBean loginCheckBean) {
                         getMyView().setLoginCheckBean(loginCheckBean);
-                        if (loginCheckBean.isPlayAd()) {//这里需要添加一个是否已经下载的判断，如果已经下载，则不再进行下载
+
+//                        获取服务端数据以判断权限
+                        if (loginCheckBean.isPlayAd()) {
+                            //这里需要添加一个是否已经下载的判断，如果已经下载，则不再进行下载
                             getAdMessage();
                         }
                     }
@@ -61,13 +71,20 @@ public class AdPresenterImpl extends PBase<AdContract.View> {
                 });
     }
 
+    /**
+     * 获取广告的图片地址、详情页面链接、广告的播放时间
+     */
+
     public void getAdMessage() {
         mAdModel.getAdMessage()
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(new RxSubscribe<AdMessageBean>() {
+
                     @Override
                     protected void _onNext(AdMessageBean adMessageBean) {
+
+//                        设置广告显示时间
                         getMyView().setAdTime(adMessageBean.getAdTime());
                         getAdPicture(adMessageBean.getAdPictureUrl(), "123.jpg");//如果没有下载，直接下载
                     }
@@ -84,16 +101,29 @@ public class AdPresenterImpl extends PBase<AdContract.View> {
                 });
     }
 
+    /**
+     * 获取本地图片
+     */
     private void getLocalPicture(String localUrl) {
         Bitmap bitmap = BitmapFactory.decodeFile(localUrl);
         getMyView().setAdImg(bitmap);
     }
 
-    public void getAdPicture(final String fileUrl, final String fileName) {//获取要展示的广告图片
+    /**
+     * 获取网络广告
+     * @param fileUrl
+     * @param fileName
+     */
+    public void getAdPicture(final String fileUrl, final String fileName) {
+
+        //获取要展示的广告图片 如果本地的Url等于网络的Url 在直接从本地获取
         if (SPUtils.get((Context) getMyView(), "adPictureUrl", "").equals(fileUrl)) {
+
             L.d("从本地获取图片");
             getLocalPicture((String) SPUtils.get((Context) getMyView(),"adPictureAddress",""));
+
         } else {
+
             L.d("从网络中获取图片");
             mAdModel.downLoadFile(fileUrl)
                     .subscribeOn(Schedulers.newThread())                            //发布者在后台线程中运行
@@ -104,6 +134,8 @@ public class AdPresenterImpl extends PBase<AdContract.View> {
                             if (responseBody != null) {
                                 L.d("收到的responseBody不为空！");
                             }
+
+//              图片下载成功后 存储到磁盘 以及Url
                             if (writeResponseBodyToDisk(responseBody, fileName, fileUrl)) {
                                 Bitmap bitmap = BitmapFactory.decodeFile(((Context) getMyView()).getExternalFilesDir(null) + File.separator + fileName);
                                 return bitmap;
@@ -111,8 +143,11 @@ public class AdPresenterImpl extends PBase<AdContract.View> {
                             return null;
                         }
                     }).subscribe(new RxSubscribe<Bitmap>((Context) getMyView()) {
+
                 @Override
                 protected void _onNext(Bitmap bitmap) {
+
+//              得到广告之后，设置
                     getMyView().setAdImg(bitmap);
                 }
 
@@ -131,7 +166,17 @@ public class AdPresenterImpl extends PBase<AdContract.View> {
     }
 
 
-    private boolean writeResponseBodyToDisk(ResponseBody body, String fileName, String fileUrl) {//保存图片到本地
+    /**
+     * 图片存储到磁盘
+     * @param body
+     * @param fileName
+     * @param fileUrl
+     * @return
+     */
+    private boolean writeResponseBodyToDisk(ResponseBody body, String fileName, String fileUrl) {
+
+        //保存图片到本地
+
         try {
             // todo change the file location/name according to your needs
 
@@ -139,6 +184,7 @@ public class AdPresenterImpl extends PBase<AdContract.View> {
             L.d("文件的保存地址为：" + ((Context) getMyView()).getExternalFilesDir(null) + File.separator + fileName);
             InputStream inputStream = null;
             OutputStream outputStream = null;
+
             try {
                 byte[] fileReader = new byte[4096];
                 long fileSize = body.contentLength();
@@ -158,20 +204,30 @@ public class AdPresenterImpl extends PBase<AdContract.View> {
                 }
                 outputStream.flush();
 
+//                把Url存储到 SPUtils 避免重复下载
                 SPUtils.put((Context) getMyView(), "adPictureAddress", ((Context) getMyView()).getExternalFilesDir(null) + File.separator + fileName);
                 SPUtils.put((Context) getMyView(), "adPictureUrl", fileUrl);
+
                 return true;
+
             } catch (IOException e) {
+
                 return false;
+
             } finally {
+
                 if (inputStream != null) {
                     inputStream.close();
                 }
+
                 if (outputStream != null) {
                     outputStream.close();
                 }
+
             }
+
         } catch (IOException e) {
+
             return false;
         }
     }
